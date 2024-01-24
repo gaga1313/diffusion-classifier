@@ -258,7 +258,7 @@ def main():
             img_input = image.to(device).unsqueeze(0)
             if args.dtype == 'float16':
                 img_input = img_input.half()
-            x0 = vae.encode(img_input).latent_dist.mean
+            x0 = vae.module.encode(img_input).latent_dist.mean
             x0 *= 0.18215
         latent_size = x0.shape[2]
         print(f'Latent size : {x0.shape}')
