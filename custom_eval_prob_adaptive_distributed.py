@@ -6,9 +6,9 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import tqdm
-from ..diffusion.datasets import get_target_dataset
-from ..diffusion.models import get_sd_model, get_scheduler_config
-from ..diffusion.utils import LOG_DIR, get_formatstr
+from diffusion.datasets import get_target_dataset
+from diffusion.models import get_sd_model, get_scheduler_config
+from diffusion.utils import LOG_DIR, get_formatstr
 import torchvision.transforms as torch_transforms
 from torchvision.transforms.functional import InterpolationMode
 import time
@@ -18,6 +18,7 @@ from gs16_dataset.dataset import ImageNet16
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -202,8 +203,11 @@ def main():
     # load pretrained models
     vae, tokenizer, text_encoder, unet, scheduler = get_sd_model(args)
     vae = vae.to(device)
+    vae = DDP(vae, device_ids = [local_rank], output_device = local_rank)
     text_encoder = text_encoder.to(device)
+    text_encoder = DDP(text_encoder, device_ids = [local_rank], output_device = local_rank)
     unet = unet.to(device)
+    unet = DDP(unet, device_ids = [local_rank], output_device = local_rank)
     torch.backends.cudnn.benchmark = True
     # load noise
     if args.noise_path is not None:
