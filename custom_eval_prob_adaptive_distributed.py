@@ -56,7 +56,7 @@ parser.add_argument('--to_keep', nargs='+', type=int, required=True)
 parser.add_argument('--n_samples', nargs='+', type=int, required=True)
 
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+#device = "cuda" if torch.cuda.is_available() else "cpu"
 
 INTERPOLATIONS = {
     'bilinear': InterpolationMode.BILINEAR,
@@ -81,40 +81,40 @@ def center_crop_resize(img, interpolation=InterpolationMode.BILINEAR):
     transform = get_transform(interpolation=interpolation)
     return transform(img)
 
-def eval_prob_adaptive(unet, latent, text_embeds, scheduler, args, latent_size=64, all_noise=None):
+def eval_prob_adaptive(unet, latent, text_embeds, scheduler, args, latent_size=64, all_noise=None, device = 0):
     scheduler_config = get_scheduler_config(args)
     T = scheduler_config['num_train_timesteps']
     max_n_samples = max(args.n_samples)
-    print(f'length of text embeds : {len(text_embeds)}')
+    #print(f'length of text embeds : {len(text_embeds)}')
     if all_noise is None:
         all_noise = torch.randn((max_n_samples * args.n_trials, 4, latent_size, latent_size), device=latent.device)
-        print(f'all_noise shape: {all_noise.shape}')
+        #print(f'all_noise shape: {all_noise.shape}')
     if args.dtype == 'float16':
         all_noise = all_noise.half()
         scheduler.alphas_cumprod = scheduler.alphas_cumprod.half()
     data = dict()
     t_evaluated = set()
     remaining_prmpt_idxs = list(range(len(text_embeds)))
-    print(f'remaining_prmpt_idxs : {remaining_prmpt_idxs}')
+    #print(f'remaining_prmpt_idxs : {remaining_prmpt_idxs}')
     start = T // max_n_samples // 2
     t_to_eval = list(range(start, T, T // max_n_samples))[:max_n_samples]
-    print(f'Length of t_to_eval : {len(t_to_eval)}')
+    #print(f'Length of t_to_eval : {len(t_to_eval)}')
     for n_samples, n_to_keep in zip(args.n_samples, args.to_keep):
         ts = []
         noise_idxs = []
         text_embed_idxs = []
         curr_t_to_eval = t_to_eval[len(t_to_eval) // n_samples // 2::len(t_to_eval) // n_samples][:n_samples]
         curr_t_to_eval = [t for t in curr_t_to_eval if t not in t_evaluated]
-        print(f'Length of curr_t_to_eval : {len(curr_t_to_eval)}')
+        #print(f'Length of curr_t_to_eval : {len(curr_t_to_eval)}')
         for prompt_i in remaining_prmpt_idxs:
             for t_idx, t in enumerate(curr_t_to_eval, start=len(t_evaluated)):
                 ts.extend([t] * args.n_trials)
                 noise_idxs.extend(list(range(args.n_trials * t_idx, args.n_trials * (t_idx + 1))))
                 text_embed_idxs.extend([prompt_i] * args.n_trials)
-        print(f'Length of text_embed : {len(ts)}')
+        #print(f'Length of text_embed : {len(ts)}')
         t_evaluated.update(curr_t_to_eval)
         pred_errors = eval_error(unet, scheduler, latent, all_noise, ts, noise_idxs,
-                                 text_embeds, text_embed_idxs, args.batch_size, args.dtype, args.loss)        
+                                 text_embeds, text_embed_idxs, args.batch_size, args.dtype, args.loss, device)        
 # match up computed errors to the data
         for prompt_i in remaining_prmpt_idxs:
             mask = torch.tensor(text_embed_idxs) == prompt_i
@@ -135,7 +135,7 @@ def eval_prob_adaptive(unet, latent, text_embeds, scheduler, args, latent_size=6
     return pred_idx, data
 
 def eval_error(unet, scheduler, latent, all_noise, ts, noise_idxs,
-               text_embeds, text_embed_idxs, batch_size=32, dtype='float32', loss='l2'):
+               text_embeds, text_embed_idxs, batch_size=32, dtype='float32', loss='l2', device = 0):
     assert len(ts) == len(noise_idxs) == len(text_embed_idxs)
     pred_errors = torch.zeros(len(ts), device='cpu')
     idx = 0
@@ -201,13 +201,15 @@ def main():
     # train_loader = DataLoader(target_dataset, batch_size = 1, sampler = sampler)
     prompts_df = pd.read_csv(args.prompt_path)
     # load pretrained models
-    vae, tokenizer, text_encoder, unet, scheduler = get_sd_model(args)
+    vae, tokenizer, text_encoder, unet, scheduler = get_sd_model(args, local_rank)
     vae = vae.to(device)
     vae = DDP(vae, device_ids = [local_rank], output_device = local_rank)
     text_encoder = text_encoder.to(device)
     text_encoder = DDP(text_encoder, device_ids = [local_rank], output_device = local_rank)
     unet = unet.to(device)
     unet = DDP(unet, device_ids = [local_rank], output_device = local_rank)
+    
+    
     torch.backends.cudnn.benchmark = True
     # load noise
     if args.noise_path is not None:
@@ -252,8 +254,8 @@ def main():
                 total += 1
             continue
         image_name, image, label = target_dataset[i]
-        print(f'File name : {image_name} Label : {label}')
-        print(f'Image input shape: {image.shape}')
+        #print(f'File name : {image_name} Label : {label}')
+        #print(f'Image input shape: {image.shape}')
         with torch.no_grad():
             img_input = image.to(device).unsqueeze(0)
             if args.dtype == 'float16':
@@ -261,17 +263,17 @@ def main():
             x0 = vae.module.encode(img_input).latent_dist.mean
             x0 *= 0.18215
         latent_size = x0.shape[2]
-        print(f'Latent size : {x0.shape}')
+        #print(f'Latent size : {x0.shape}')
         start = time.time()
-        pred_idx, pred_errors = eval_prob_adaptive(unet, x0, text_embeddings, scheduler, args, latent_size, all_noise)
+        pred_idx, pred_errors = eval_prob_adaptive(unet, x0, text_embeddings, scheduler, args, latent_size, all_noise, device)
         pred = prompts_df.classidx[pred_idx]
-        print(f'Predicted : {pred}, Actual : {label}')
+        #print(f'Predicted : {pred}, Actual : {label}')
         end = time.time()
         torch.save(dict(errors=pred_errors, pred=pred, label=label), fname)
         if pred == label:
             correct += 1
         total += 1
-        print(f'========= time take to evaluate 1 image: {end-start}')
+        #print(f'========= time take to evaluate 1 image: {end-start}')
 
 
 if __name__ == '__main__':
