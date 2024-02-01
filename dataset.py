@@ -16,8 +16,7 @@ class ImageNet16(Dataset):
         self.transform = transform
         self.data = self.load_data()
 
-    def load_data(self):
-        
+    def load_data(self): 
         data = []
         with open('humancategory_info.json', 'r') as file:
             hc_info = json.load(file)
@@ -45,6 +44,20 @@ class ImageNet16(Dataset):
             file_path = os.path.join(self.data_folder, fname)
             data.append((str(file_path), label))
         return data
+    
+    def load_shape_data(self):
+        data = []
+        with open('humancategory_info.json', 'r') as file:
+            hc_info = json.load(file)
+        classes = os.listdir(self.data_folder)
+        for cls in classes:
+            label = int(hc_info[cls]['Hn_category'])
+            file_paths = os.path.join(self.data_folder, cls)
+            random.shuffle(file_paths)
+            for i in range(10):
+                data.append((os.path.join(self.data_folder, cls, file_paths[i]), label))
+        return data
+
     
     def get_class_weights_and_distribution(self):
 
