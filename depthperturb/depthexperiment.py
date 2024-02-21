@@ -74,6 +74,12 @@ def save_latents(z, dir):
     plt.savefig(os.path.join(dir , f'latent_{i}.png'))
   return 
 
+def save_image(image, name):
+  plt.imshow(image)
+  plt.savefig(os.path.join(dir, f'{name}.png'))
+  return
+
+
 
 def main():
   tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14", torch_dtype = torch.float16)
@@ -87,6 +93,8 @@ def main():
   image = give_image()
   latents = pil_to_latents(image).detach().cpu().numpy().astype(np.float32)
   save_latents(latents, latent_dir)
+  latent_surface_norm = get_surface_normal_from_gradient(latents[0,2,:,:], latents[0,3,:,:])
+  save_image(latent_surface_norm, 'latent_surface_norm')
 
 if __name__ == '__main__':
   vae, unet, scheduler = get_sd_model()
