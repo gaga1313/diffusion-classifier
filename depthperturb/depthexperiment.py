@@ -76,7 +76,7 @@ def save_latents(z, dir):
 
 def save_image(image, name):
   plt.imshow(image)
-  plt.savefig(os.path.join(dir, f'{name}.png'))
+  plt.savefig(os.path.join(latent_dir, f'{name}.png'))
   return
 
 
@@ -94,7 +94,7 @@ def main():
   latents = pil_to_latents(image).detach().cpu().numpy().astype(np.float32)
   save_latents(latents, latent_dir)
   latent_surface_norm = get_surface_normal_from_gradient(latents[0,2,:,:], latents[0,3,:,:])
-  save_image(latent_surface_norm, 'latent_surface_norm')
+  save_image(latent_surface_norm, 'surface_norm')
 
 if __name__ == '__main__':
   vae, unet, scheduler = get_sd_model()
