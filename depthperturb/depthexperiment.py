@@ -68,7 +68,13 @@ def get_surface_normal_from_gradient(gradientx, gradienty):
   normal = direction / magnitude
   return np.transpose(normal, (1,2,0))
   
-  
+def save_latents(z, dir):
+  for i in range(4):
+    plt.imshow(z[0,i,:,:], cmap = 'gray')
+    plt.savefig(os.path.join(dir , f'latent_{i}.png'))
+  return 
+
+
 def main():
   tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14", torch_dtype = torch.float16)
   text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14", torch_dtype = torch.float16).cuda()
@@ -80,9 +86,13 @@ def main():
 
   image = give_image()
   latents = pil_to_latents(image)
-  print(latents.shape)
+  save_latents(latents, latent_dir)
 
 if __name__ == '__main__':
   vae, unet, scheduler = get_sd_model()
   vae = vae.to("cuda")
+  latent_dir = './latents'
+  if not os.path.exists(latent_dir):
+    os.mkdir(latent_dir)
+
   main()
