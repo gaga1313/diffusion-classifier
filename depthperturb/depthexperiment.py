@@ -86,3 +86,5 @@ def main():
   latents = pil_to_latents(image)
   print(latents.shape)
 
+if __name__ == '__main__':
+  main()
