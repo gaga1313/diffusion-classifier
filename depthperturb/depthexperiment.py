@@ -10,7 +10,7 @@ from torchvision import transforms
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model_id = "CompVis/stable-diffusion-v1-4"
-root_dir = '/content/drive/MyDrive/Gg_Fossils_data_shared_copy/SD'
+# root_dir = ''
 
 def get_sd_model():
   scheduler = EulerDiscreteScheduler.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="scheduler")
@@ -20,8 +20,7 @@ def get_sd_model():
   return vae, unet, scheduler
 
 def give_image(dir):
-  image_list = os.listdir(dir)
-  image = Image.open(os.path.join(dir, image_list[0])).convert('RGB').resize(size=(512, 512))
+  image = Image.open('image1.png').convert('RGB').resize(size=(512, 512))
   return image
 
 def pil_to_latents(image):
