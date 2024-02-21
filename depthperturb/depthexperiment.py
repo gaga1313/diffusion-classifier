@@ -85,7 +85,7 @@ def main():
   print(f"Shape of embedding : {emb.shape}")
 
   image = give_image()
-  latents = pil_to_latents(image)
+  latents = pil_to_latents(image).cpu().numpy().astype(np.float32)
   save_latents(latents, latent_dir)
 
 if __name__ == '__main__':
