@@ -78,11 +78,11 @@ def main():
   emb = text_encoder(tok.input_ids.to("cuda"))[0].half()
   print(f"Shape of embedding : {emb.shape}")
 
-  vae = vae.to("cuda")
   image = give_image()
   latents = pil_to_latents(image)
   print(latents.shape)
 
 if __name__ == '__main__':
   vae, unet, scheduler = get_sd_model()
+  vae = vae.to("cuda")
   main()
