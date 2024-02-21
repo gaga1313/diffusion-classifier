@@ -19,7 +19,7 @@ def get_sd_model():
   vae = pipe.vae
   return vae, unet, scheduler
 
-def give_image(dir):
+def give_image():
   image = Image.open('image1.png').convert('RGB').resize(size=(512, 512))
   return image
 
@@ -70,8 +70,6 @@ def get_surface_normal_from_gradient(gradientx, gradienty):
   
   
 def main():
-  vae, unet, scheduler = get_sd_model()
-
   tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14", torch_dtype = torch.float16)
   text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14", torch_dtype = torch.float16).cuda()
 
@@ -81,9 +79,10 @@ def main():
   print(f"Shape of embedding : {emb.shape}")
 
   vae = vae.to("cuda")
-  image = give_image(root_dir)
+  image = give_image()
   latents = pil_to_latents(image)
   print(latents.shape)
 
 if __name__ == '__main__':
+  vae, unet, scheduler = get_sd_model()
   main()
